@@ -1,0 +1,111 @@
+#!/bin/env perl
+
+=head1 NAME
+
+    proc_swapsize_ - This plugin monitor the number of swap size every processes
+
+=head1 APPLICABLE SYSTEMS
+
+    Require perl version 5.14.0 or later,becase use Non-destructive substitution ( /r option )
+
+=head1 CONFIGURATION
+
+    [proc_swapsize_*]
+    user root
+    group root
+    env.PATH /root/.plenv/shims:/root/.plenv/bin:/bin:/usr/bin
+
+=head1 INTERPRETATION
+
+    This plugin read /proc/$pid/status.
+
+=head1 MAGIC MARKERS
+
+    #%# family=auto
+    #%# capabilities=suggest
+
+=head1 VERSION
+
+    version 0.0.1
+
+=head1 AUTHOR
+
+    Kazunori Maehata(@maehachi08)
+
+=head1 LICENSE
+
+    GPL v3
+
+=cut
+
+use strict;
+use warnings;
+use File::Basename;
+
+my $mode = ($ARGV[0] or "print");
+
+#--------------------------------------------------------------------------
+# Data processing section
+#--------------------------------------------------------------------------
+my $process_name_small     = basename( $0 )=~ s/.*_//r;
+my $process_name_camelcase = ucfirst $process_name_small;
+my @pids                   = `/usr/bin/pgrep $process_name_small | /bin/sort -n`;
+
+my @process_swaps;
+foreach my $pid ( @pids ) {
+
+    chomp $pid;
+
+    if ( ! -f "/proc/$pid/status" ) {
+        # file not found! next.
+        next;
+    }
+
+    my $swap_size_kb = `/bin/grep VmSwap /proc/$pid/status | /bin/awk '{print \$2}'`;
+    chomp $swap_size_kb;
+    my $swap_size = $swap_size_kb * 1024;
+    push( @process_swaps, $swap_size );
+}
+
+my $process_count = @process_swaps;
+
+
+
+#--------------------------------------------------------------------------
+# Print attributes section
+#--------------------------------------------------------------------------
+if ( $mode eq 'config' ) {
+
+    # Global attributes
+    printf "graph_category swap\n";
+    printf "graph_title    $process_name_camelcase processes swap size\n";
+    printf "graph_args     --base 1024 --lower-limit 0\n";
+    printf "graph_vlabel   Bytes\n";
+    printf "graph_vtitle   Swap size\n";
+    printf "graph_scale    yes\n";
+    printf "graph_info     This graph shows the swap size of $process_name_small processes.\n";
+    printf "graph_total    total\n";
+
+}
+
+
+# Datasource-specific plugin attributes
+for ( my $i=1; $i<=$process_count; $i++ ) {
+    my $value_name = "$process_name_small" . "_" . "$i";
+    my $swap_size_per_proc = shift( @process_swaps );
+
+    if ( $mode eq 'config' ) {
+        if ( $i == 1 ) {
+            print "$value_name" . "." . "draw " . "AREA" . "\n";
+        } else {
+            print "$value_name" . "." . "draw " . "STACK" . "\n";
+        }
+
+        print "$value_name" . "." . "type "  . "GAUGE"  . "\n";
+        print "$value_name" . "." . "label " . "$value_name"  . "\n";
+    }
+
+    print "$value_name" . "." . "value " . "$swap_size_per_proc" . "\n";
+}
+
+# vim: ft=perl : sw=4 : ts=4 : et
