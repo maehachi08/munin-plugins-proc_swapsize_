@@ -22,7 +22,7 @@
 =head1 MAGIC MARKERS
 
     #%# family=auto
-    #%# capabilities=suggest
+    #%# capabilities=autoconf suggest
 
 =head1 VERSION
 
