@@ -6,7 +6,7 @@
 
 =head1 APPLICABLE SYSTEMS
 
-    Require perl version 5.14.0 or later,becase use Non-destructive substitution ( /r option )
+    Require perl version 5.8.0 or later
 
 =head1 CONFIGURATION
 
@@ -47,7 +47,7 @@ my $mode = ($ARGV[0] or "print");
 #--------------------------------------------------------------------------
 # Data processing section
 #--------------------------------------------------------------------------
-my $process_name_small     = basename( $0 )=~ s/.*_//r;
+( my $process_name_small   = basename( $0 ) ) =~ s/.*_//;
 my $process_name_camelcase = ucfirst $process_name_small;
 my @pids                   = `/usr/bin/pgrep $process_name_small | /bin/sort -n`;
 
