@@ -47,23 +47,36 @@ my $mode = ($ARGV[0] or "print");
 #--------------------------------------------------------------------------
 # Data processing section
 #--------------------------------------------------------------------------
+sub get_swap_size_by_bytes {
+    my $pid   = shift;
+    my $fpath = "/proc/$pid/status";
+    my $swap_size_kb;
+
+    open my $fpath_fh, '<', $fpath
+        or return;
+
+    while ( my $line = <$fpath_fh> ) {
+        chomp $line;
+        next unless $line =~ /VmSwap/;
+        ( $swap_size_kb = $line ) =~ s/VmSwap:\s+(\d.*)kB$/$1/;
+    }
+
+    close $fpath_fh
+        or die "err: $!\n";
+
+    my $swap_size = $swap_size_kb * 1024;
+    return $swap_size;
+}
+
+
 ( my $process_name_small   = basename( $0 ) ) =~ s/.*_//;
 my $process_name_camelcase = ucfirst $process_name_small;
 my @pids                   = `/usr/bin/pgrep $process_name_small | /bin/sort -n`;
 
 my @process_swaps;
 foreach my $pid ( @pids ) {
-
     chomp $pid;
-
-    if ( ! -f "/proc/$pid/status" ) {
-        # file not found! next.
-        next;
-    }
-
-    my $swap_size_kb = `/bin/grep VmSwap /proc/$pid/status | /bin/awk '{print \$2}'`;
-    chomp $swap_size_kb;
-    my $swap_size = $swap_size_kb * 1024;
+    my $swap_size = get_swap_size_by_bytes( $pid );
     push( @process_swaps, $swap_size );
 }
 
