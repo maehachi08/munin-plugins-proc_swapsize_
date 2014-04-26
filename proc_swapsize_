@@ -53,7 +53,7 @@ sub get_swap_size_by_bytes {
     my $swap_size_kb;
 
     open my $fpath_fh, '<', $fpath
-        or return;
+        or die "$fpath: $!";
 
     while ( my $line = <$fpath_fh> ) {
         chomp $line;
@@ -61,8 +61,7 @@ sub get_swap_size_by_bytes {
         ( $swap_size_kb = $line ) =~ s/VmSwap:\s+(\d.*)kB$/$1/;
     }
 
-    close $fpath_fh
-        or die "err: $!\n";
+    close $fpath_fh;
 
     my $swap_size = $swap_size_kb * 1024;
     return $swap_size;
